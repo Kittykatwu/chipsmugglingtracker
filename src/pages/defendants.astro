@@ -1,0 +1,96 @@
+---
+import Base from '../layouts/Base.astro';
+import Badge from '../components/Badge.astro';
+import SortTh from '../components/SortTh.astro';
+import { defendants, D, C, num, caseById } from '../lib/data.js';
+import { DEFENDANT_STATUSES, isCleared } from '../lib/status.js';
+import { fmtDate } from '../lib/format.js';
+import { asOfDisplay } from '../lib/metrics.js';
+import { u } from '../lib/site.js';
+
+const uniq = (a) => [...new Set(a)].filter(Boolean).sort();
+const countries = uniq(defendants.map((d) => d[D.country]));
+const statuses = Object.keys(DEFENDANT_STATUSES).filter((s) => defendants.some((d) => d[D.status] === s));
+const types = uniq(defendants.map((d) => d[D.type]));
+---
+<Base title="Defendants" description={`Every person and company charged in a tracked AI chip smuggling case, with charges, plea, custody and current status. Data as of ${asOfDisplay}.`}>
+  <h1>Defendants</h1>
+  <p class="lede">Every person and company charged in a tracked case. One row per defendant; one Taiwan row groups unnamed co-defendants.</p>
+  <div class="callout callout-innocence">
+    <p><strong>Charges are allegations. Every defendant is presumed innocent unless proven guilty.</strong> Names appear exactly as charging authorities or multiple credible outlets report them. People the authorities have not named are not identified here.</p>
+  </div>
+
+  <div class="dt" data-noun="defendant rows" data-default-sort="case" data-default-dir="asc">
+    <form class="table-tools" role="search" aria-label="Filter defendants" onsubmit="return false" hidden>
+      <label class="field">Search
+        <input type="search" data-search placeholder="Name, charge, role…" />
+      </label>
+      <label class="field">Country
+        <select data-filter="country"><option value="">All</option>{countries.map((x) => <option>{x}</option>)}</select>
+      </label>
+      <label class="field">Status
+        <select data-filter="status"><option value="">All</option>{statuses.map((x) => <option>{x}</option>)}</select>
+      </label>
+      <label class="field">Type
+        <select data-filter="type"><option value="">All</option>{types.map((x) => <option>{x}</option>)}</select>
+      </label>
+      <label class="field sort-mobile">Sort
+        <select data-mobile-sort>
+          <option value="case:asc">Case</option>
+          <option value="asof:desc">Most recently updated</option>
+          <option value="name:asc">Name</option>
+        </select>
+      </label>
+      <button type="button" class="btn btn-sm" data-reset>Clear filters</button>
+    </form>
+    <p class="result-count" data-count aria-live="polite">{defendants.length} defendant rows</p>
+    <div class="table-scroll">
+      <table class="data cards">
+        <caption class="sr-only">Defendants. Column headers with buttons can be sorted.</caption>
+        <thead>
+          <tr>
+            <SortTh k="name">Name as reported</SortTh>
+            <SortTh k="case">Case</SortTh>
+            <SortTh k="country">Country</SortTh>
+            <th scope="col">Charges</th>
+            <th scope="col">Plea</th>
+            <SortTh k="status">Status</SortTh>
+            <SortTh k="asof" type="date">Status as of</SortTh>
+            <th scope="col">Next event</th>
+          </tr>
+        </thead>
+        <tbody>
+          {defendants.map((d) => {
+            const c = caseById(d[D.caseId]);
+            return (
+              <tr
+                class={isCleared(d[D.status]) ? 'is-cleared' : ''}
+                data-country={d[D.country]} data-status={d[D.status]} data-type={d[D.type]}
+                data-sname={d[D.name]} data-scase={d[D.caseId] + d[D.id]} data-scountry={d[D.country]}
+                data-sstatus={d[D.status]} data-sasof={d[D.statusAsOf]}
+              >
+                <td data-label="Name" class="card-title">
+                  <strong>{d[D.name]}</strong>
+                  {(num(d[D.persons]) ?? 1) > 1 && <> <span class="flag">{d[D.persons]} people</span></>}
+                  <br /><span class="small muted">{d[D.type]} · {d[D.role]}</span>
+                </td>
+                <td data-label="Case"><a href={u(`/cases/${d[D.caseId]}/#defendants`)}>{c ? c[C.name] : d[D.caseId]}</a> <span class="small muted mono">{d[D.caseId]}</span></td>
+                <td data-label="Country">{d[D.country]}</td>
+                <td data-label="Charges">{d[D.charges]}</td>
+                <td data-label="Plea">{d[D.plea] || <span class="muted">Not reported</span>}</td>
+                <td data-label="Status"><Badge status={d[D.status]} /></td>
+                <td data-label="Status as of" class="nowrap">{fmtDate(d[D.statusAsOf])}</td>
+                <td data-label="Next event">{d[D.nextEvent] || <span class="muted">None recorded</span>}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p class="small muted">There are no individual profile pages. People appear only in this table and on their case's page.</p>
+  <script>
+    import { initDataTable } from '../scripts/datatable.js';
+    document.querySelectorAll<HTMLElement>('.dt').forEach(initDataTable);
+  </script>
+</Base>

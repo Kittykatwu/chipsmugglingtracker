@@ -1,0 +1,54 @@
+---
+import Base from '../layouts/Base.astro';
+import Stat from '../components/Stat.astro';
+import Badge from '../components/Badge.astro';
+import { SITE } from '../config.js';
+import { METRICS, asOfDisplay } from '../lib/metrics.js';
+import { developments } from '../lib/developments.js';
+import { fmtDate } from '../lib/format.js';
+import { u, datasetJsonLd } from '../lib/site.js';
+
+const devs = developments(5);
+const description = `${SITE.mission}: an open, case-level and defendant-level record of charges, pleas, sentences and seizures, with citable numbers and downloadable data.`;
+---
+<Base description={description} jsonLd={datasetJsonLd(Astro.site)}>
+  <p class="eyebrow">Open data · {SITE.license}</p>
+  <h1>{SITE.name}</h1>
+  <p class="lede">{SITE.mission}.</p>
+  <div class="prose">
+    <p>
+      The United States restricts exports of the most advanced AI chips to China, and other governments have begun acting against people who route
+      them there through third countries. How much hardware gets through is estimated elsewhere. This project tracks the other side: who has been
+      charged, where, with what, and what happened next. Each case and defendant is recorded from court records and official statements so that
+      reporters and researchers can cite precise, sourced numbers about the enforcement response.
+    </p>
+  </div>
+
+  <div class="btns">
+    <a class="btn btn-primary" href={u('/cases/')}>Browse the cases</a>
+    <a class="btn" href={u('/journalists/#downloads')}>Download the data</a>
+    <a class="btn" href={u('/methodology/')}>How the data is built</a>
+  </div>
+
+  <h2 id="numbers">Headline numbers</h2>
+  <p class="text-2">Charges are allegations. Every defendant is presumed innocent unless proven guilty. All numbers are computed from the published data, as of {asOfDisplay}.</p>
+  <ul class="stats">
+    {METRICS.map((m) => <Stat m={m} />)}
+  </ul>
+
+  <h2 id="recent">Recent developments</h2>
+  <ul class="dev-list">
+    {devs.map((d) => (
+      <li>
+        <time class="dev-date" datetime={d.date}>{fmtDate(d.date)}</time>
+        <div>
+          <a href={u(`/cases/${d.caseId}/`)}><strong>{d.caseName}</strong></a> <span class="muted mono">{d.caseId}</span><br />
+          {d.kind === 'status'
+            ? <span>{d.names.join(', ')}: <Badge status={d.status} /></span>
+            : <span>First official action. Case status: <Badge status={d.status} /></span>}
+        </div>
+      </li>
+    ))}
+  </ul>
+  <p class="small muted">Dates are each row's "Status as of" or "First official action" date. See <a href={u('/updates/')}>Updates</a> for every change to the data.</p>
+</Base>

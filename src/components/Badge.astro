@@ -1,0 +1,5 @@
+---
+import { toneFor } from '../lib/status.js';
+const { status } = Astro.props;
+---
+{status && <span class={`badge tone-${toneFor(status)}`}>{status}</span>}

@@ -1,0 +1,51 @@
+---
+// Horizontal bar chart in plain HTML/CSS (reflows on phones), with a table view.
+// rows: [{ label, value, display, note? }]
+const { id, title, sub, rows, valueHeader = 'Value', labelHeader = 'Category', footnote = '' } = Astro.props;
+const max = Math.max(...rows.map((r) => r.value), 0) || 1;
+---
+<section class="chart-block" aria-labelledby={`${id}-h`}>
+  <h3 id={`${id}-h`}>{title}</h3>
+  {sub && <p class="chart-sub">{sub}</p>}
+  {rows.length === 0
+    ? <div class="empty-state">No data yet.</div>
+    : (
+      <div class="chart" role="img" aria-label={`${title}. ${rows.map((r) => `${r.label}: ${r.display}`).join('; ')}.`}>
+        <ul class="hbars" aria-hidden="true">
+          {rows.map((r) => (
+            <li class="hbar" title={`${r.label}: ${r.display}`}>
+              <span class="hbar-label">{r.label}</span>
+              <span class="hbar-track"><span class="hbar-fill" style={`width:${Math.max((r.value / max) * 78, r.value > 0 ? 1.5 : 0)}%`}></span><span class="hbar-val">{r.display}</span></span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  {footnote && <p class="small muted" style="margin-top:.5rem">{footnote}</p>}
+  {rows.length > 0 && (
+    <details class="table-view">
+      <summary>Show as table</summary>
+      <div class="table-scroll">
+        <table class="data">
+          <caption class="sr-only">{title}</caption>
+          <thead><tr><th scope="col">{labelHeader}</th><th scope="col" class="num">{valueHeader}</th>{rows.some((r) => r.note) && <th scope="col">Note</th>}</tr></thead>
+          <tbody>
+            {rows.map((r) => <tr><td>{r.label}</td><td class="num">{r.display}</td>{rows.some((x) => x.note) && <td>{r.note || ''}</td>}</tr>)}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  )}
+</section>
+<style>
+  .hbars { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.55rem; }
+  .hbar { display: grid; grid-template-columns: minmax(8rem, 15rem) 1fr; gap: 0.75rem; align-items: center; font-size: 0.875rem; }
+  .hbar-label { color: var(--text-2); line-height: 1.3; }
+  .hbar-track { display: flex; align-items: center; gap: 0.5rem; min-height: 1.4rem; border-left: 1px solid var(--line-strong); }
+  .hbar-fill { display: block; height: 18px; background: var(--bar); border-radius: 0 4px 4px 0; }
+  .hbar:hover .hbar-fill { filter: brightness(1.15); }
+  .hbar-val { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); }
+  @media (max-width: 560px) {
+    .hbar { grid-template-columns: 1fr; gap: 0.2rem; }
+  }
+</style>

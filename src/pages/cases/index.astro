@@ -1,0 +1,114 @@
+---
+import Base from '../../layouts/Base.astro';
+import Badge from '../../components/Badge.astro';
+import SortTh from '../../components/SortTh.astro';
+import {
+  cases, C, num, hardwareTags, HARDWARE_TERMS, destinationIsChina,
+} from '../../lib/data.js';
+import { CASE_STATUSES } from '../../lib/status.js';
+import { fmtDate, fmtMoney, fmtCount } from '../../lib/format.js';
+import { asOfDisplay } from '../../lib/metrics.js';
+import { u } from '../../lib/site.js';
+
+const uniq = (a) => [...new Set(a)].filter(Boolean).sort();
+const countries = uniq(cases.map((c) => c[C.country]));
+const statuses = Object.keys(CASE_STATUSES).filter((s) => cases.some((c) => c[C.status] === s));
+const hwUsed = HARDWARE_TERMS.filter((h) => cases.some((c) => hardwareTags(c).includes(h)));
+const insiderLabel = (c) => (c[C.insider] === 'Y' ? 'Yes' : 'No');
+
+const charged = (c) => {
+  const i = num(c[C.individuals]) || 0, k = num(c[C.companies]) || 0;
+  if (!i && !k) return 'None';
+  return [i && fmtCount(i, 'person', 'people'), k && fmtCount(k, 'company', 'companies')].filter(Boolean).join(', ');
+};
+---
+<Base title="Cases" description={`Searchable table of ${cases.length} AI chip smuggling prosecutions and official seizures, with status, hardware, value alleged to have reached China and people charged. Data as of ${asOfDisplay}.`}>
+  <h1>Cases</h1>
+  <p class="lede">One row per prosecution or official seizure. Select a case for its defendants, charges and sources.</p>
+  <p class="small text-2">Charges are allegations. Every defendant is presumed innocent unless proven guilty. "Value alleged to have reached China" counts only amounts authorities say were actually delivered; other dollar figures and what they measure are on each case page.</p>
+
+  <div class="dt" data-noun="cases" data-default-sort="date" data-default-dir="desc">
+    <form class="table-tools" role="search" aria-label="Filter cases" onsubmit="return false" hidden>
+      <label class="field">Search
+        <input type="search" data-search placeholder="Name, court, hardware…" />
+      </label>
+      <label class="field">Country
+        <select data-filter="country"><option value="">All</option>{countries.map((x) => <option>{x}</option>)}</select>
+      </label>
+      <label class="field">Case status
+        <select data-filter="status"><option value="">All</option>{statuses.map((x) => <option>{x}</option>)}</select>
+      </label>
+      <label class="field">Hardware
+        <select data-filter="hardware"><option value="">All</option>{hwUsed.map((x) => <option>{x}</option>)}</select>
+      </label>
+      <label class="field">Insider at chip/server firm
+        <select data-filter="insider"><option value="">All</option><option>Yes</option><option>No</option></select>
+      </label>
+      <label class="field sort-mobile">Sort
+        <select data-mobile-sort>
+          <option value="date:desc">Newest first</option>
+          <option value="date:asc">Oldest first</option>
+          <option value="value:desc">Value reached China (high–low)</option>
+          <option value="id:asc">Case ID</option>
+        </select>
+      </label>
+      <button type="button" class="btn btn-sm" data-reset>Clear filters</button>
+    </form>
+    <p class="result-count" data-count aria-live="polite">{cases.length} cases</p>
+    <div class="table-scroll">
+      <table class="data cards">
+        <caption class="sr-only">Cases. Column headers with buttons can be sorted.</caption>
+        <thead>
+          <tr>
+            <SortTh k="id">Case ID</SortTh>
+            <SortTh k="name">Case name</SortTh>
+            <SortTh k="country">Country</SortTh>
+            <SortTh k="status">Status</SortTh>
+            <th scope="col">Hardware</th>
+            <SortTh k="value" type="num" cls="num">Value alleged to have reached China</SortTh>
+            <SortTh k="charged" type="num" cls="num">Charged</SortTh>
+            <SortTh k="date" type="date">First official action</SortTh>
+          </tr>
+        </thead>
+        <tbody>
+          {cases.map((c) => {
+            const v = num(c[C.reachedChina]);
+            const total = (num(c[C.individuals]) || 0) + (num(c[C.companies]) || 0);
+            return (
+              <tr
+                data-country={c[C.country]}
+                data-status={c[C.status]}
+                data-hardware={hardwareTags(c).join('|')}
+                data-insider={insiderLabel(c)}
+                data-sid={c[C.id]}
+                data-sname={c[C.name]}
+                data-scountry={c[C.country]}
+                data-sstatus={c[C.status]}
+                data-svalue={v === null ? '' : String(v)}
+                data-scharged={String(total)}
+                data-sdate={c[C.firstAction]}
+              >
+                <td data-label="Case ID" class="mono nowrap">{c[C.id]}</td>
+                <td data-label="Case" class="card-title">
+                  <a href={u(`/cases/${c[C.id]}/`)}><strong>{c[C.name]}</strong></a>
+                  {!destinationIsChina(c) && <><br /><span class="flag">Destination not confirmed as China</span></>}
+                </td>
+                <td data-label="Country">{c[C.country]}</td>
+                <td data-label="Status"><Badge status={c[C.status]} /></td>
+                <td data-label="Hardware">{c[C.hardware]}</td>
+                <td data-label="Reached China" class="num">{v === null ? <span class="muted">Not stated</span> : fmtMoney(v)}</td>
+                <td data-label="Charged" class="num">{charged(c)}</td>
+                <td data-label="First action" class="nowrap">{fmtDate(c[C.firstAction])}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <p class="small muted">Insider: a charged or named employee of a major chip or server firm, as coded in the data. Hardware filter matches model names in the "Hardware named" field. <a href={u('/journalists/#downloads')}>Download the full data</a>.</p>
+  <script>
+    import { initDataTable } from '../../scripts/datatable.js';
+    document.querySelectorAll<HTMLElement>('.dt').forEach(initDataTable);
+  </script>
+</Base>

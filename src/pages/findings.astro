@@ -1,0 +1,132 @@
+---
+import Base from '../layouts/Base.astro';
+import BarChart from '../components/BarChart.astro';
+import {
+  cases, defendants, C, D, num, persons, isIndividual, hardwareTags, HARDWARE_TERMS,
+  transitCountries, monthsBetween,
+} from '../lib/data.js';
+import { DEFENDANT_STATUSES } from '../lib/status.js';
+import { fmtMoney, fmtSentence } from '../lib/format.js';
+import { asOfDisplay, METRICS } from '../lib/metrics.js';
+import { u } from '../lib/site.js';
+
+const sum = (a) => a.reduce((x, y) => x + y, 0);
+const inds = defendants.filter(isIndividual);
+const plural = (n, s, p = s + 's') => `${n} ${n === 1 ? s : p}`;
+
+// People charged by country
+const byCountry = [...new Set(inds.map((d) => d[D.country]))]
+  .map((k) => ({ label: k, value: sum(inds.filter((d) => d[D.country] === k).map(persons)) }))
+  .sort((a, b) => b.value - a.value)
+  .map((r) => ({ ...r, display: plural(r.value, 'person', 'people') }));
+
+// Status breakdown (individuals)
+const byStatus = Object.keys(DEFENDANT_STATUSES)
+  .map((s) => ({ label: s, value: sum(inds.filter((d) => d[D.status] === s).map(persons)) }))
+  .filter((r) => r.value > 0)
+  .map((r) => ({ ...r, display: plural(r.value, 'person', 'people') }));
+
+// Value alleged to have reached China, by case
+const byValue = cases
+  .filter((c) => (num(c[C.reachedChina]) ?? 0) > 0)
+  .map((c) => ({ label: `${c[C.id]} · ${c[C.name]}`, value: num(c[C.reachedChina]), display: fmtMoney(num(c[C.reachedChina])) }))
+  .sort((a, b) => b.value - a.value);
+const valueExcluded = cases.filter((c) => !((num(c[C.reachedChina]) ?? 0) > 0)).map((c) => c[C.id]);
+
+// Transit countries named (count of cases)
+const transitCounts = {};
+cases.forEach((c) => new Set(transitCountries(c)).forEach((t) => (transitCounts[t] = (transitCounts[t] || 0) + 1)));
+const byTransit = Object.entries(transitCounts)
+  .map(([label, value]) => ({ label, value, display: plural(value, 'case') }))
+  .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label));
+
+// Hardware named (count of cases)
+const byHardware = HARDWARE_TERMS
+  .map((h) => ({ label: h, value: cases.filter((c) => hardwareTags(c).includes(h)).length }))
+  .filter((r) => r.value > 0)
+  .map((r) => ({ ...r, display: plural(r.value, 'case') }));
+
+// Months to first action, by case
+const byMonths = cases
+  .map((c) => ({ c, m: monthsBetween(c[C.conductStart], c[C.firstAction]) }))
+  .filter((r) => r.m !== null)
+  .map(({ c, m }) => ({ label: `${c[C.id]} · ${c[C.name]}`, value: m, display: `${m.toFixed(1)} months` }))
+  .sort((a, b) => b.value - a.value);
+const avgMetric = METRICS.find((m) => m.key === 'months-to-action');
+
+// Statutory maximum vs sentence imposed
+const sentencedAll = defendants.filter((d) => (d[D.sentenceMonths] || '').trim() !== '');
+const sentenced = sentencedAll.filter((d) => num(d[D.sentenceMonths]) !== null && num(d[D.maxYears]) !== null);
+const sentencedOther = sentencedAll.filter((d) => !sentenced.includes(d));
+const maxMonths = Math.max(...sentenced.map((d) => Math.max(num(d[D.maxYears]) * 12, num(d[D.sentenceMonths]))), 1);
+---
+<Base title="Findings" description={`Charts computed from the tracker data: people charged by country, status of defendants, value alleged to have reached China, transit countries, hardware and time to first action. Data as of ${asOfDisplay}.`}>
+  <h1>Findings</h1>
+  <p class="lede">Simple counts computed from the data at build time, as of {asOfDisplay}. Each chart has a table version.</p>
+
+  <section class="callout callout-placeholder" aria-labelledby="kf">
+    <h2 id="kf" style="margin-top:0">Key findings</h2>
+    <p class="placeholder">[Key findings: to be written by the author. This section is intentionally left blank.]</p>
+  </section>
+
+  <h2>People and outcomes</h2>
+  <BarChart id="country" title="People charged, by country" sub="Individuals only; grouped rows are counted by the number of people they represent." rows={byCountry} labelHeader="Country" valueHeader="People charged" />
+  <BarChart id="status" title="Current status of people charged" sub="Latest step found in public sources. Charges are allegations." rows={byStatus} labelHeader="Status" valueHeader="People" />
+
+  <section class="chart-block" aria-labelledby="sent-h">
+    <h3 id="sent-h">Statutory maximum vs. sentence imposed</h3>
+    <p class="chart-sub">Compares the maximum prison term on the top count with the sentence a court actually imposed, for each sentenced defendant.</p>
+    {sentencedAll.length === 0
+      ? (
+        <div class="empty-state">
+          <p style="margin:0 0 .5rem"><strong>No sentences have been confirmed in public sources yet.</strong></p>
+          <p style="margin:0">This chart will fill in automatically when a sentence is recorded. A statutory maximum is the ceiling set by law, not a prediction of the sentence.</p>
+        </div>
+      )
+      : (
+        <div class="chart">
+          <ul class="legend"><li><span class="sw" style="background:var(--bar)"></span>Statutory maximum, top count</li><li><span class="sw" style="background:var(--bar-2)"></span>Sentence imposed</li></ul>
+          <ul class="pairs">
+            {sentenced.map((d) => (
+              <li>
+                <span class="pair-label">{d[D.name]} <span class="muted mono small">{d[D.caseId]}</span></span>
+                <span class="pair-bars">
+                  <span class="pb"><span class="pf" style={`width:${((num(d[D.maxYears]) ?? 0) * 12 / maxMonths) * 78}%;background:var(--bar)`}></span>{`${num(d[D.maxYears])} years (${num(d[D.maxYears]) * 12} months) max.`}</span>
+                  <span class="pb"><span class="pf" style={`width:${(num(d[D.sentenceMonths]) / maxMonths) * 78}%;background:var(--bar-2)`}></span>{fmtSentence(d[D.sentenceMonths])} imposed</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    {sentencedOther.length > 0 && (
+      <p class="small text-2" style="margin-top:.5rem">Not plotted (sentence is not a fixed term, or no statutory maximum is recorded): {sentencedOther.map((d, i) => <>{i > 0 && '; '}{d[D.name]} ({d[D.caseId]}): {fmtSentence(d[D.sentenceMonths])}</>)}.</p>
+    )}
+    {sentencedAll.length > 0 && (
+      <details class="table-view"><summary>Show as table</summary>
+        <div class="table-scroll"><table class="data"><caption class="sr-only">Statutory maximum vs. sentence imposed</caption><thead><tr><th scope="col">Defendant</th><th scope="col">Case</th><th scope="col">Statutory maximum, top count</th><th scope="col">Sentence imposed</th></tr></thead>
+        <tbody>{sentencedAll.map((d) => <tr><td>{d[D.name]}</td><td>{d[D.caseId]}</td><td>{d[D.maxYears] ? `${d[D.maxYears]} years` : 'Not recorded'}</td><td>{fmtSentence(d[D.sentenceMonths])}</td></tr>)}</tbody></table></div>
+      </details>
+    )}
+  </section>
+
+  <h2>Money</h2>
+  <BarChart id="value" title="Value alleged by authorities to have reached China, by case" sub="Only amounts that authorities say were actually delivered to China. Allegations, not proven amounts. Order values, wire transfers and seizures are excluded." rows={byValue} labelHeader="Case" valueHeader="Value alleged to have reached China (USD)" footnote={`Not shown (no delivered value stated, or $0): ${valueExcluded.join(', ')}.`} />
+
+  <h2>Routes and hardware</h2>
+  <BarChart id="transit" title="Transit countries named" sub="Number of cases (including seizures) whose sources name each country as a transit point. Regions that do not name a country are not counted." rows={byTransit} labelHeader="Country" valueHeader="Cases" />
+  <BarChart id="hardware" title="Hardware named" sub="Number of cases whose sources name each chip model. One case can name several." rows={byHardware} labelHeader="Hardware" valueHeader="Cases" />
+
+  <h2>Time to enforcement</h2>
+  <BarChart id="months" title="Months from start of alleged scheme to first official action" sub={`Start dates are approximate to the month. Average: ${avgMetric.display} months across ${byMonths.length} cases. Seizures without a scheme start date are excluded.`} rows={byMonths} labelHeader="Case" valueHeader="Months" />
+
+  <p class="small muted">Definitions for every number are on the <a href={u('/methodology/')}>Methodology</a> page. Download the data from <a href={u('/journalists/#downloads')}>For journalists</a>.</p>
+</Base>
+<style>
+  .pairs { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.9rem; }
+  .pairs li { display: grid; grid-template-columns: minmax(8rem, 15rem) 1fr; gap: 0.75rem; font-size: 0.875rem; }
+  .pair-bars { display: grid; gap: 4px; }
+  .pb { display: flex; align-items: center; gap: 0.5rem; font-variant-numeric: tabular-nums; }
+  .pf { display: block; height: 14px; border-radius: 0 4px 4px 0; }
+  @media (max-width: 560px) { .pairs li { grid-template-columns: 1fr; } }
+</style>

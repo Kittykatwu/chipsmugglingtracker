@@ -1,0 +1,19 @@
+{
+  "name": "ai-chip-smuggling-enforcement-tracker",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && node scripts/check-headlines.mjs",
+    "preview": "astro preview",
+    "check": "node scripts/check-headlines.mjs",
+    "deploy": "sh scripts/deploy.sh"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "3.7.6",
+    "astro": "5.18.2",
+    "csv-parse": "7.0.3",
+    "marked": "18.2.1"
+  }
+}

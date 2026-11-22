@@ -1,0 +1,71 @@
+---
+import Base from '../layouts/Base.astro';
+import { cases, defendants, C, D, persons, isIndividual, isCompany, destinationIsChina } from '../lib/data.js';
+import { DEFENDANT_STATUSES, CASE_STATUSES } from '../lib/status.js';
+import { METRICS, asOfDisplay } from '../lib/metrics.js';
+import { u } from '../lib/site.js';
+
+const sum = (a) => a.reduce((x, y) => x + y, 0);
+const usCases = cases.filter((c) => c[C.country] === 'United States');
+const usDefs = defendants.filter((d) => d[D.country] === 'United States');
+const usPeople = sum(usDefs.filter(isIndividual).map(persons));
+const usCompanies = sum(usDefs.filter(isCompany).map(persons));
+const notChina = cases.filter((c) => !destinationIsChina(c)).map((c) => c[C.id]);
+const grouped = defendants.filter((d) => persons(d) > 1);
+const STATEMENT_URL = 'https://www.justice.gov/opa/pr/joint-statement-department-commerce-and-department-justice-megaspeed-investigation';
+---
+<Base title="Methodology" description="How the AI Chip Smuggling Enforcement Tracker is built: scope, the case and defendant structure, status and dollar-figure rules, identity rule, verification and limitations.">
+  <div class="prose">
+    <h1>Methodology</h1>
+    <p class="lede">What is counted and how.</p>
+
+    <h2 id="scope">Scope</h2>
+    <p>The tracker records criminal charges, guilty pleas, convictions, regulatory settlements and official seizures, in any country, involving advanced AI accelerators (for example Nvidia A100, H100, H200, B200 and B300) or servers containing them, where diversion in breach of export controls is at issue.</p>
+    <p>Excluded: cases about semiconductor manufacturing equipment or chip-design software, and lawful remote access to chips abroad. Investigations that have not produced charges or an official seizure are not included.</p>
+    <p>Some included matters do not name China as the destination in official sources. They are kept because they meet the scope rule, and each is labeled "Destination not confirmed as China" on its page{notChina.length > 0 && <> (currently {notChina.map((id, i) => <>{i > 0 && ', '}<a href={u(`/cases/${id}/`)}>{id}</a></>)})</>}. They contribute nothing to the "value alleged to have reached China" total.</p>
+    <p>It tracks the enforcement response, not the total volume of smuggling. For volume estimates, see Epoch AI and others.</p>
+
+    <h2 id="structure">Two levels: cases and defendants</h2>
+    <p><strong>Cases</strong> ({cases.length} rows) hold one row per prosecution or seizure: hardware, routes, how the scheme was detected, charges and dollar figures. <strong>Defendants</strong> ({defendants.length} rows) hold one row per charged person or company: charges, plea, custody, status and sentence. Defendants link to cases by Case ID.</p>
+    <p>Where authorities have published only surnames, unnamed co-defendants are grouped in one row with a "Persons represented" count{grouped.length > 0 && <> ({grouped.map((d) => `${d[D.id]} represents ${d[D.persons]} people`).join('; ')})</>}. People counts always sum this column; they never count rows.</p>
+
+    <h2 id="status">Status rule</h2>
+    <p>Status reflects the latest step found in public sources, with its date ("Status as of"). Every charged person is presumed innocent unless proven guilty. "Not found" is not the same as "did not happen": where an expected event, such as a sentencing, cannot be confirmed, the row says so.</p>
+    <p>A change that makes a person's status more serious (to a guilty plea, conviction or sentence) is made only on the basis of a court record or an official government release, never news reports alone. Acquittals and dismissals are shown as prominently as the original charges.</p>
+    <h3>Defendant statuses</h3>
+    <dl class="facts">{Object.entries(DEFENDANT_STATUSES).map(([k, v]) => <><dt>{k}</dt><dd>{v.def}</dd></>)}</dl>
+    <h3>Case statuses</h3>
+    <dl class="facts">{Object.entries(CASE_STATUSES).map(([k, v]) => <><dt>{k}</dt><dd>{v.def}</dd></>)}</dl>
+
+    <h2 id="dollars">Dollar-figure rule</h2>
+    <p>Every dollar figure records what it measures: an order value, wire transfers, alleged exports, resale proceeds or profit, or a seizure. Figures with different bases are never added into one headline. The only totals are within a single basis: value alleged to have reached China, funds received from abroad, and seizures. Foreign-currency amounts converted to US dollars are approximate and marked as such.</p>
+
+    <h2 id="identity">Identity rule</h2>
+    <p>Names are used exactly as charging authorities or multiple credible outlets report them. People that authorities have kept anonymous are not identified, even when other reporting names them. Two people with the same name are never assumed to be the same person. There are no individual profile pages: people appear only in the defendants table and on their case's page.</p>
+
+    <h2 id="verification">Verification</h2>
+    <p>AI tools can help find and pre-fill cases, but every field is checked against its source. "Primary document obtained" is marked yes only when the indictment, complaint, plea agreement, judgment or an official release was actually accessed. "Last verified" is updated whenever a row is rechecked. Every change to the data is logged with its source on the <a href={u('/updates/')}>Updates</a> page.</p>
+    <p>Preferred sources, in order: court records (federal dockets via CourtListener and PACER), official government releases (US Department of Justice and US Attorney offices, the Bureau of Industry and Security, Taiwan prosecutors, the Singapore Police Force, Malaysian customs), then reputable news for leads and context.</p>
+
+    <h2 id="numbers">How the headline numbers are calculated</h2>
+    <dl class="facts">{METRICS.map((m) => <><dt>{m.label}</dt><dd>{m.definition} <span class="muted">(from {m.source})</span></dd></>)}</dl>
+    <p class="small text-2">An automated check recomputes every headline number from the CSV files on each build and stops the site from publishing if any page shows a different value.</p>
+
+    <h2 id="cross-check">Cross-check against the US government's count</h2>
+    <p>
+      On 17 November 2026, the Departments of Commerce and Justice stated that "seventeen defendants across six separate investigations have been charged" in semiconductor smuggling cases under the current administration (<a href={STATEMENT_URL}>joint statement</a>).
+      The {usCases.length} US cases in this tracker contain {usPeople} individuals and {usCompanies} {usCompanies === 1 ? 'company' : 'companies'}, or {usPeople + usCompanies} defendants.
+    </p>
+    <p><strong>This match is an inference.</strong> The statement did not list the cases it counted, so it cannot be confirmed that its six investigations are the same as the {usCases.length} US cases here.</p>
+
+    <h2 id="limitations">Limitations</h2>
+    <ul>
+      <li>Coverage depends on what courts and governments make public. Sealed cases, and cases announced only in local languages, may be missed.</li>
+      <li>Conduct start dates are approximate, usually to the month, so "months to first action" is approximate.</li>
+      <li>Taiwan, Singapore and Malaysia do not prosecute breaches of US export controls as such. Cases there are brought as fraud, breach of trust, money laundering or permit offences, so charges are not directly comparable across countries.</li>
+      <li>Statutory maximums are not comparable across countries or across defendants with different counts, and are not predictions of sentences.</li>
+      <li>Dollar figures are allegations by authorities, not proven amounts.</li>
+    </ul>
+    <p class="small muted">Data as of {asOfDisplay}.</p>
+  </div>
+</Base>

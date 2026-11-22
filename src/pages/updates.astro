@@ -1,0 +1,51 @@
+---
+import Base from '../layouts/Base.astro';
+import { marked } from 'marked';
+import { readRaw } from '../lib/data.js';
+import { fmtDate } from '../lib/format.js';
+import { u } from '../lib/site.js';
+
+// Public changelog, generated from data/CHANGELOG.md (first table in the file).
+const tokens = marked.lexer(readRaw('CHANGELOG.md'));
+const table = tokens.find((t) => t.type === 'table');
+const head = table ? table.header.map((h) => h.text) : [];
+const rows = table ? table.rows.map((r) => Object.fromEntries(r.map((c, i) => [head[i], c.text.replace(/\\\|/g, '|')]))) : [];
+const byDate = {};
+[...rows].reverse().forEach((r) => (byDate[r.Date] ||= []).push(r));
+const dates = Object.keys(byDate).sort().reverse();
+const isUrl = (s) => /^https?:\/\//.test(s);
+const show = (s) => (s === '(blank)' ? '' : s);
+---
+<Base title="Updates" description="Public changelog: every correction and update to the tracker data, with old value, new value, date and source.">
+  <h1>Updates</h1>
+  <p class="lede">Every change to the data, with the old value, the new value, and the source. Newest first.</p>
+  <p class="small text-2">"Primary" means a court record or an official government release. To report an error, <a href={u('/about/#tips')}>submit a correction</a>.</p>
+  {dates.length === 0 && <p>No changes recorded yet.</p>}
+  {dates.map((d) => (
+    <section>
+      <h2><time datetime={d}>{fmtDate(d)}</time> <span class="small muted" style="font-family:var(--sans);font-weight:400">({byDate[d].length} {byDate[d].length === 1 ? 'change' : 'changes'})</span></h2>
+      <div class="table-scroll">
+        <table class="data cards">
+          <thead><tr><th scope="col">Row</th><th scope="col">Field</th><th scope="col">Old value</th><th scope="col">New value</th><th scope="col">Source</th><th scope="col">Primary?</th><th scope="col">Note</th></tr></thead>
+          <tbody>
+            {byDate[d].map((r) => {
+              const id = r['Row ID'];
+              const href = /^CS-\d+/.test(id) ? u(`/cases/${id}/`) : null;
+              return (
+                <tr>
+                  <td data-label="Row" class="mono nowrap">{href ? <a href={href}>{id}</a> : id}</td>
+                  <td data-label="Field">{r.Field}</td>
+                  <td data-label="Old">{show(r['Old value']) || <span class="muted">(blank)</span>}</td>
+                  <td data-label="New">{show(r['New value']) || <span class="muted">(blank)</span>}</td>
+                  <td data-label="Source" class="small" style="word-break:break-word">{isUrl(r.Source) ? <a href={r.Source} rel="noopener">{r.Source}</a> : r.Source}</td>
+                  <td data-label="Primary?">{r['Primary source?']}</td>
+                  <td data-label="Note" class="small">{show(r.Note)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  ))}
+</Base>

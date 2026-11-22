@@ -1,0 +1,66 @@
+---
+import Base from '../layouts/Base.astro';
+import CopyCite from '../components/CopyCite.astro';
+import { METRICS, asOf, asOfDisplay } from '../lib/metrics.js';
+import { cases, defendants } from '../lib/data.js';
+import { SITE } from '../config.js';
+import { u, citeLine, datasetJsonLd, tipMailto } from '../lib/site.js';
+
+const quoteLine = (m) =>
+  `${m.label}: ${m.display}${m.unit ? ' ' + m.unit : ''} (as of ${asOfDisplay}). Source: ${SITE.name}, ${SITE.displayUrl}.`;
+---
+<Base title="For journalists" description={`Citable headline numbers with definitions and as-of dates, downloadable data (CSV and JSON), methodology and media contact for the ${SITE.name}.`} jsonLd={datasetJsonLd(Astro.site)}>
+  <h1>For journalists</h1>
+  <p class="lede">Every number below comes straight from the published data. Quote it with its definition and as-of date, and use "charged" or "alleged" for anyone who has not pleaded guilty or been convicted.</p>
+
+  <div class="grid-2">
+    <div>
+      <h2 style="margin-top:0">Cite the tracker</h2>
+      <CopyCite text={citeLine()} label="Copy citation" />
+    </div>
+    <div>
+      <h2 style="margin-top:0">Media contact</h2>
+      <p>{SITE.author}, {SITE.affiliation}<br /><a href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
+      <p class="small text-2">For corrections, use <a href={tipMailto('')}>Submit a tip or correction</a>. Every correction is logged on <a href={u('/updates/')}>Updates</a>.</p>
+    </div>
+  </div>
+
+  <h2 id="numbers">Headline numbers</h2>
+  <p class="text-2">As of {asOfDisplay}. Data source for each is named below; definitions are fixed and documented in the <a href={u('/methodology/')}>methodology</a>.</p>
+  <div class="table-scroll">
+    <table class="data cards">
+      <caption class="sr-only">Headline numbers with definitions and citation lines</caption>
+      <thead><tr><th scope="col">Number</th><th scope="col" class="num">Value</th><th scope="col">Definition</th><th scope="col">Source and date</th><th scope="col">Quote line</th></tr></thead>
+      <tbody>
+        {METRICS.map((m) => (
+          <tr data-metric={m.key} data-value={String(m.value)} data-asof={asOf}>
+            <td data-label="Number" class="card-title"><strong>{m.label}</strong></td>
+            <td data-label="Value" class="num"><strong class="metric-display" style="font-size:1.25rem">{m.display}</strong>{m.unit && <> {m.unit}</>}</td>
+            <td data-label="Definition" class="small">{m.definition}</td>
+            <td data-label="Source" class="small"><span class="mono">{m.source}</span><br />As of <time datetime={asOf}>{asOfDisplay}</time></td>
+            <td data-label="Quote line"><CopyCite text={quoteLine(m)} label="Copy" /></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  <h2 id="downloads">Download the data</h2>
+  <p>Licensed under <a href={SITE.licenseUrl} rel="license">{SITE.license}</a>: reuse freely with credit. The files are regenerated from the same source as this site on every update.</p>
+  <ul class="downloads">
+    <li><a href={u('/data/cases.csv')} download><strong>cases.csv</strong><span>{cases.length} cases and seizures, one row each</span></a></li>
+    <li><a href={u('/data/defendants.csv')} download><strong>defendants.csv</strong><span>{defendants.length} defendant rows, linked by Case ID</span></a></li>
+    <li><a href={u('/data/cases.json')} download><strong>cases.json</strong><span>Same data as cases.csv</span></a></li>
+    <li><a href={u('/data/defendants.json')} download><strong>defendants.json</strong><span>Same data as defendants.csv</span></a></li>
+    <li><a href={u('/data/headline-numbers.json')} download><strong>headline-numbers.json</strong><span>The numbers above, with definitions</span></a></li>
+  </ul>
+  <p class="small text-2">Important: to count people, sum the "Persons represented" column in defendants.csv; do not count rows. Dollar columns each measure one thing; read "What the headline value measures" before using the headline value.</p>
+
+  <h2>Before you quote</h2>
+  <ul>
+    <li>Charges are allegations. Every defendant is presumed innocent unless proven guilty.</li>
+    <li>Status reflects the latest step found in public sources, with its date. "Not found" does not mean "did not happen".</li>
+    <li>Never add dollar figures with different bases. The only totals are within one basis.</li>
+    <li>Read the <a href={u('/methodology/')}>methodology</a> for scope, limitations, and how the US count compares with the government's own figure.</li>
+  </ul>
+</Base>

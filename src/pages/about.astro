@@ -1,0 +1,38 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE } from '../config.js';
+import { u, tipMailto } from '../lib/site.js';
+---
+<Base title="About and contact" description={`About the ${SITE.name}, its author, and how to submit a tip or correction.`}>
+  <div class="prose">
+    <h1>About</h1>
+    <p class="lede">{SITE.mission}.</p>
+
+    <h2>The project</h2>
+    <p>{SITE.name} is an open, case-level and defendant-level record of criminal and regulatory enforcement against people and companies accused of diverting advanced AI chips, or servers containing them, to China in violation of export controls. It records who has been charged, where, with what, and what happened next, from court records and official statements.</p>
+    <p>It exists to give journalists and researchers accurate, citable numbers about the enforcement response. It does not estimate how much hardware has been smuggled. The data is free to reuse under <a href={SITE.licenseUrl} rel="license">{SITE.license}</a>.</p>
+
+    <h2>Author</h2>
+    <p><strong>{SITE.author}</strong>, {SITE.affiliation}{SITE.profileUrl && <> (<a href={SITE.profileUrl} rel="noopener">Stanford profile</a>)</>}.</p>
+    {SITE.authorBio && <p>{SITE.authorBio}</p>}
+    <h2>How the data is kept accurate</h2>
+    <ul>
+      <li>Every case and defendant entry links to its source, preferably a court record or an official government release.</li>
+      <li>A person's status is changed to a guilty plea, conviction or sentence only on the basis of a court record or official release, never news reports alone.</li>
+      <li>Every change to the data is logged publicly, with the old value, the new value and the source, on <a href={u('/updates/')}>Updates</a>.</li>
+      <li>The headline numbers are recalculated from the published data every time the site is rebuilt. See the <a href={u('/methodology/')}>methodology</a>.</li>
+    </ul>
+    {SITE.independence && <p class="small text-2">{SITE.independence}</p>}
+
+    <h2 id="contact">Media contact</h2>
+    <p><a href={`mailto:${SITE.email}`}>{SITE.email}</a></p>
+
+    <h2 id="tips">Submit a tip or correction</h2>
+    <p>If you know of a case that is missing, a status that has changed, or an error, please write in. Court records and official releases are the most useful. A correction from a case page opens with that case's ID in the subject line.</p>
+    <p><a class="btn btn-primary" href={tipMailto('')}>Email a tip or correction</a></p>
+    <p class="small text-2">Corrections are logged publicly on <a href={u('/updates/')}>Updates</a>. Tips are not published.</p>
+
+    <h2>Privacy</h2>
+    <p>This site uses no analytics, tracking or cookies.</p>
+  </div>
+</Base>

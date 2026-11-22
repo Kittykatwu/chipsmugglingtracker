@@ -1,0 +1,10 @@
+---
+// A dollar figure is never shown without what it measures.
+import { fmtMoney } from '../lib/format.js';
+import { num } from '../lib/data.js';
+const { value, basis, empty = 'Not stated' } = Astro.props;
+const n = num(value);
+---
+{n === null
+  ? <span class="muted">{empty}</span>
+  : <span class="money" data-basis={basis}><strong>{fmtMoney(n)}</strong><span class="money-basis">Measures: {basis}</span></span>}

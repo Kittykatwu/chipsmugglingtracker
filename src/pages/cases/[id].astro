@@ -1,0 +1,179 @@
+---
+import Base from '../../layouts/Base.astro';
+import Badge from '../../components/Badge.astro';
+import Money from '../../components/Money.astro';
+import {
+  cases, C, D, num, defendantsFor, destinationIsChina, monthsBetween, isSeizureOnly, PLEA_GUILTY,
+} from '../../lib/data.js';
+import { CASE_STATUSES, isCleared } from '../../lib/status.js';
+import { fmtDate, fmtMoney, fmtCount, fmtSentence } from '../../lib/format.js';
+import { u, tipMailto, citeLine } from '../../lib/site.js';
+import { SITE } from '../../config.js';
+
+export function getStaticPaths() {
+  return cases.map((c) => ({ params: { id: c[C.id] }, props: { c } }));
+}
+const { c } = Astro.props;
+const id = c[C.id];
+const defs = defendantsFor(id);
+const months = monthsBetween(c[C.conductStart], c[C.firstAction]);
+const seizure = isSeizureOnly(c);
+const nPeople = defs.filter((d) => d[D.type] === 'Individual').reduce((a, d) => a + (num(d[D.persons]) ?? 1), 0);
+const nCompanies = defs.filter((d) => d[D.type] === 'Company').length;
+const cleared = defs.filter((d) => isCleared(d[D.status]));
+const guilty = defs.filter((d) => PLEA_GUILTY.test(d[D.plea] || '') || d[D.status] === 'Convicted at trial' || d[D.status] === 'Sentenced');
+const reached = num(c[C.reachedChina]);
+
+const pleaWhat = (d) => {
+  const charges = (d[D.charges] || '').replace(/^Pleaded (guilty )?to\s+/i, '');
+  const when = (/\(([^)]+)\)/.exec(d[D.plea] || '') || [])[1];
+  if (d[D.status] === 'Convicted at trial') return `${d[D.name]} was convicted at trial of: ${charges}.`;
+  return `${d[D.name]} pleaded guilty${when ? ` (${when})` : ''} to: ${charges}.`;
+};
+
+const descParts = [
+  `${c[C.country]}`,
+  c[C.status],
+  nPeople || nCompanies ? `${[nPeople && fmtCount(nPeople, 'person', 'people'), nCompanies && fmtCount(nCompanies, 'company', 'companies')].filter(Boolean).join(' and ')} charged` : 'no one charged',
+  c[C.hardware],
+];
+const description = `${c[C.name]} (${id}): ${descParts.join('; ')}. Charges are allegations. Sources, defendants and status as of ${fmtDate(c[C.lastVerified])}.`;
+const sources = [c[C.source1], c[C.source2]].filter(Boolean);
+const caseCite = `${SITE.author}, ${SITE.name}, case ${id}, ${SITE.displayUrl}/cases/${id}, data as of ${fmtDate(c[C.lastVerified])}.`;
+---
+<Base title={`${c[C.name]} (${id})`} description={description}>
+  <p class="breadcrumb"><a href={u('/cases/')}>Cases</a> / <span class="mono">{id}</span></p>
+  <h1>{c[C.name]}</h1>
+  <p><Badge status={c[C.status]} /> <span class="small text-2">{CASE_STATUSES[c[C.status]]?.def}</span></p>
+
+  {cleared.length > 0 && (
+    <div class="callout callout-cleared" role="note">
+      {cleared.map((d) => (
+        <p><strong>{d[D.name]}: {d[D.status] === 'Acquitted' ? 'acquitted (found not guilty)' : 'charges dismissed'}</strong>{d[D.statusAsOf] && <> on {fmtDate(d[D.statusAsOf])}</>}. {d[D.notes]}</p>
+      ))}
+    </div>
+  )}
+
+  <div class="callout callout-innocence">
+    {seizure
+      ? <p>This is a seizure. No one has been charged in connection with it in the sources reviewed.</p>
+      : <p><strong>Charges are allegations. Every defendant is presumed innocent unless proven guilty.</strong></p>}
+    {guilty.map((d) => <p>{pleaWhat(d)}</p>)}
+  </div>
+
+  {!destinationIsChina(c) && (
+    <div class="callout callout-placeholder">
+      <p><strong>Destination not confirmed as China.</strong> Destination named in sources: {c[C.destination]}. This case is included under the tracker's scope rule; see <a href={u('/methodology/#scope')}>Methodology</a>.</p>
+    </div>
+  )}
+
+  <h2>Summary</h2>
+  <dl class="facts">
+    <dt>Prosecuting country</dt><dd>{c[C.country]}</dd>
+    <dt>Court / authority</dt><dd>{c[C.court]}</dd>
+    <dt>Docket / reference</dt><dd>{c[C.docket] || <span class="muted">Not recorded</span>}</dd>
+    <dt>Alleged conduct began (approx.)</dt><dd>{c[C.conductStart] ? fmtDate(c[C.conductStart]).replace(/^1 /, '') : <span class="muted">Not applicable</span>}</dd>
+    <dt>First official action</dt><dd>{fmtDate(c[C.firstAction])}</dd>
+    {months !== null && <><dt>Months from conduct start to first action</dt><dd>{months.toFixed(1)}</dd></>}
+    <dt>Charged</dt><dd>{nPeople || nCompanies ? [nPeople && fmtCount(nPeople, 'person', 'people'), nCompanies && fmtCount(nCompanies, 'company', 'companies')].filter(Boolean).join(', ') : 'No one'}</dd>
+    <dt>Insider at a major chip or server firm?</dt><dd>{c[C.insider] === 'Y' ? 'Yes' : 'No'}</dd>
+    <dt>Last verified</dt><dd>{fmtDate(c[C.lastVerified])}</dd>
+  </dl>
+
+  <h2>Hardware and routes</h2>
+  <dl class="facts">
+    <dt>Hardware named</dt><dd>{c[C.hardware]}</dd>
+    <dt>Units (as described)</dt><dd>{c[C.units] || <span class="muted">Not stated</span>}</dd>
+    <dt>Transit countries named</dt><dd>{c[C.transit] || <span class="muted">Not stated</span>}</dd>
+    <dt>Destination named</dt><dd>{c[C.destination]}</dd>
+    <dt>How detected (primary)</dt><dd>{c[C.detected]}</dd>
+  </dl>
+
+  <h2>Dollar figures</h2>
+  <p class="small text-2">Each figure measures something different. They are not added together.</p>
+  <dl class="facts">
+    <dt>Headline value cited</dt>
+    <dd><Money value={c[C.headline]} basis={c[C.headlineBasis]} empty={c[C.headlineBasis] || 'Not stated'} /></dd>
+    <dt>Value alleged to have reached China</dt>
+    <dd>{reached === null ? <span class="muted">Not stated by authorities</span> : <Money value={c[C.reachedChina]} basis="Value recorded as having reached China (an allegation, not a proven amount); the source is given in the notes below" />}</dd>
+    <dt>Funds received from abroad for the scheme</dt>
+    <dd>{num(c[C.funds]) === null ? <span class="muted">Not stated</span> : <Money value={c[C.funds]} basis="Payments from abroad funding the scheme, as alleged; payers are described in the notes" />}</dd>
+    <dt>Seized / forfeited</dt>
+    <dd>{num(c[C.seized]) === null ? <span class="muted">None recorded</span> : <Money value={c[C.seized]} basis="Value of hardware or cash seized or forfeited, as reported by authorities" />}</dd>
+  </dl>
+
+  <h2>Charges and methods</h2>
+  <dl class="facts">
+    <dt>Charges / legal basis</dt><dd>{c[C.charges]}</dd>
+    <dt>Methods described</dt><dd>{c[C.methods]}</dd>
+  </dl>
+
+  <h2 id="defendants">Defendants</h2>
+  {defs.length === 0
+    ? <p class="text-2">No one has been charged in this matter in the sources reviewed.</p>
+    : (
+      <div class="table-scroll">
+        <table class="data cards">
+          <caption class="sr-only">Defendants in {id}</caption>
+          <thead>
+            <tr>
+              <th scope="col">Name as reported</th>
+              <th scope="col">Role</th>
+              <th scope="col">Charges</th>
+              <th scope="col">Plea</th>
+              <th scope="col">Custody / bail</th>
+              <th scope="col">Status</th>
+              <th scope="col">Next event</th>
+            </tr>
+          </thead>
+          <tbody>
+            {defs.map((d) => (
+              <tr class={isCleared(d[D.status]) ? 'is-cleared' : ''}>
+                <td data-label="Name" class="card-title">
+                  <strong>{d[D.name]}</strong>
+                  {(num(d[D.persons]) ?? 1) > 1 && <> <span class="flag">{d[D.persons]} people</span></>}
+                  <br /><span class="small muted">{d[D.type]} · <span class="mono">{d[D.id]}</span></span>
+                </td>
+                <td data-label="Role">{d[D.role]}<br /><span class="small text-2">{d[D.affiliation]}</span></td>
+                <td data-label="Charges">{d[D.charges]}{d[D.maxYears] && <><br /><span class="small text-2">Max. on top count: {d[D.maxYears]} years</span></>}</td>
+                <td data-label="Plea">{d[D.plea] || <span class="muted">Not reported</span>}</td>
+                <td data-label="Custody">{d[D.custody] || <span class="muted">Not reported</span>}</td>
+                <td data-label="Status">
+                  <Badge status={d[D.status]} />
+                  {d[D.statusAsOf] && <><br /><span class="small muted">as of {fmtDate(d[D.statusAsOf])}</span></>}
+                  {d[D.sentenceMonths] && <><br /><span class="small"><strong>Sentence imposed:</strong> {fmtSentence(d[D.sentenceMonths])}</span></>}
+                  {d[D.sentenceSought] && <><br /><span class="small text-2">Sought by prosecutors: {d[D.sentenceSought]}</span></>}
+                </td>
+                <td data-label="Next event">{d[D.nextEvent] || <span class="muted">None recorded</span>}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  {defs.some((d) => d[D.notes]) && (
+    <>
+      <h3>Defendant notes</h3>
+      <ul>
+        {defs.filter((d) => d[D.notes]).map((d) => <li><strong>{d[D.name]}:</strong> {d[D.notes]}</li>)}
+      </ul>
+    </>
+  )}
+
+  <h2>Notes, disputes and open questions</h2>
+  <p>{c[C.notes] || <span class="muted">None.</span>}</p>
+
+  <h2>Sources</h2>
+  <ul>
+    {sources.map((s) => (/^https?:/.test(s) ? <li><a href={s} rel="noopener">{s}</a></li> : <li>{s}</li>))}
+    {[...new Set(defs.map((d) => d[D.source]).filter((s) => s && !sources.includes(s)))].map((s) =>
+      /^https?:/.test(s) ? <li><a href={s} rel="noopener">{s}</a> <span class="small muted">(defendant row)</span></li> : <li>{s}</li>
+    )}
+  </ul>
+  <p class="small text-2">Primary document obtained (indictment, complaint, plea agreement, judgment or official release): <strong>{c[C.primaryDoc] === 'Y' ? 'Yes' : 'No'}</strong>.</p>
+
+  <hr />
+  <h2 class="h3">Cite this case</h2>
+  <p class="small"><code class="mono">{caseCite}</code></p>
+  <p><a class="btn" href={tipMailto(id)}>Submit a tip or correction about {id}</a></p>
+</Base>

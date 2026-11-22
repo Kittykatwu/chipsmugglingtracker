@@ -1,0 +1,4 @@
+---
+const { k, type = 'text', cls = '' } = Astro.props;
+---
+<th scope="col" class={cls} aria-sort="none"><button type="button" class="sort" data-sort={k} data-type={type}><slot /><span class="arrow" aria-hidden="true"></span></button></th>
