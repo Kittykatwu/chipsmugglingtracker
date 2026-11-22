@@ -84,7 +84,7 @@ for (const f of html) {
     if (String(expected[key]) !== val) fail(`${rel}: ${key} data-value=${val}, expected ${expected[key]}`);
     if (disp !== expectedDisplay[key]) fail(`${rel}: ${key} shows "${disp}", expected "${expectedDisplay[key]}"`);
     if (asof !== asOf) fail(`${rel}: ${key} as-of ${asof}, expected ${asOf}`);
-    if (!/Definition|data-label="Definition"/.test(inner)) fail(`${rel}: ${key} shown without its definition`);
+    if (!/class="stat-def"|data-label="Definition"/.test(inner)) fail(`${rel}: ${key} shown without its definition`);
     if (!/As of/.test(inner)) fail(`${rel}: ${key} shown without an "As of" date`);
   }
   // Footer on every page

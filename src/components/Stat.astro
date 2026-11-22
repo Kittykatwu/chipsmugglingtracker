@@ -7,7 +7,7 @@ const { m, showSource = false } = Astro.props;
 <li class="stat" data-metric={m.key} data-value={String(m.value)} data-asof={asOf}>
   <p class="stat-label">{m.label}</p>
   <p class="stat-value"><span class="metric-display">{m.display}</span>{m.unit && <span class="stat-unit">{m.unit}</span>}</p>
-  <p class="stat-def"><strong>Definition:</strong> {m.definition}</p>
+  <p class="stat-def">{m.definition}</p>
   {showSource && <p class="stat-def"><strong>Data source:</strong> <span class="mono">{m.source}</span></p>}
   <p class="stat-asof">As of <time datetime={asOf}>{asOfDisplay}</time></p>
   <slot />
