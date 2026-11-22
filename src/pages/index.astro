@@ -9,7 +9,7 @@ import { fmtDate } from '../lib/format.js';
 import { u, datasetJsonLd } from '../lib/site.js';
 
 const devs = developments(5);
-const description = `${SITE.mission}: an open, case-level and defendant-level record of charges, pleas, sentences and seizures, with citable numbers and downloadable data.`;
+const description = `Tracking what happens when people are caught smuggling advanced AI chips, such as Nvidia H100, H200 and B300 GPUs, to China: an open, case-level and defendant-level record of charges, pleas, sentences and seizures, with citable numbers and downloadable data.`;
 ---
 <Base description={description} jsonLd={datasetJsonLd(Astro.site)}>
   <p class="eyebrow">Open data · {SITE.license}</p>
@@ -17,12 +17,14 @@ const description = `${SITE.mission}: an open, case-level and defendant-level re
   <p class="lede">{SITE.mission}.</p>
   <div class="prose">
     <p>
-      The United States restricts exports of the most advanced AI chips to China, and other governments have begun acting against people who route
+      The United States restricts exports of the most advanced AI chips to China, including Nvidia's data-center GPUs such as the A100, H100, H200 and Blackwell-generation B200 and B300, and other governments have begun acting against people who route
       them there through third countries. How much hardware gets through is estimated elsewhere. This project tracks the other side: who has been
       charged, where, with what, and what happened next. Each case and defendant is recorded from court records and official statements so that
       reporters and researchers can cite precise, sourced numbers about the enforcement response.
     </p>
   </div>
+
+  <p class="small text-2 prose">Chipmakers such as Nvidia are named here to describe the hardware involved. A company is a defendant only if it is listed as one.</p>
 
   <div class="btns">
     <a class="btn btn-primary" href={u('/cases/')}>Browse the cases</a>

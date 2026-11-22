@@ -22,7 +22,7 @@ const charged = (c) => {
   return [i && fmtCount(i, 'person', 'people'), k && fmtCount(k, 'company', 'companies')].filter(Boolean).join(', ');
 };
 ---
-<Base title="Cases" description={`Searchable table of ${cases.length} AI chip smuggling prosecutions and official seizures, with status, hardware, value alleged to have reached China and people charged. Data as of ${asOfDisplay}.`}>
+<Base title="Cases" description={`Searchable table of ${cases.length} prosecutions and official seizures involving smuggled AI chips such as Nvidia H100, H200 and B300 GPUs, with status, hardware, value alleged to have reached China and people charged. Data as of ${asOfDisplay}.`}>
   <h1>Cases</h1>
   <p class="lede">One row per prosecution or official seizure. Select a case for its defendants, charges and sources.</p>
   <p class="small text-2">Charges are allegations. Every defendant is presumed innocent unless proven guilty. "Value alleged to have reached China" counts only amounts authorities say were actually delivered; other dollar figures and what they measure are on each case page.</p>

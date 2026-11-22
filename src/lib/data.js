@@ -90,12 +90,12 @@ export const caseById = (id) => cases.find((c) => c[C.id] === id);
 
 // Hardware vocabulary used for filters and the hardware chart.
 const HW_PATTERNS = [
-  ['A100', /\bA100\b/i],
-  ['H100', /\bH100\b/i],
-  ['H200', /\bH200\b/i],
-  ['B200', /\bB200\b/i],
-  ['B300', /\bB300\b/i],
-  ['RTX (consumer GPU)', /\bRTX\b/i],
+  ['Nvidia A100', /\bA100\b/i],
+  ['Nvidia H100', /\bH100\b/i],
+  ['Nvidia H200', /\bH200\b/i],
+  ['Nvidia B200', /\bB200\b/i],
+  ['Nvidia B300', /\bB300\b/i],
+  ['Nvidia GeForce RTX (consumer GPU)', /\bRTX\b/i],
 ];
 export const HARDWARE_TERMS = [...HW_PATTERNS.map(([k]) => k), 'Model not specified'];
 export function hardwareTags(c) {
