@@ -1,0 +1,62 @@
+{
+  "dataset": "AI Chip Smuggling Enforcement Tracker",
+  "as_of": "2026-11-25",
+  "license": "CC BY 4.0",
+  "note": "Charges are allegations. Every defendant is presumed innocent unless proven guilty.",
+  "numbers": [
+    {
+      "key": "individuals-charged",
+      "label": "Individuals charged worldwide",
+      "value": 30,
+      "display": "30",
+      "unit": null,
+      "definition": "People (not companies) charged in a tracked case, in any country. Counted by summing \"Persons represented\" in the defendants table, because one Taiwan row groups unnamed co-defendants. 7 companies have also been charged and are not included.",
+      "source": "defendants.csv"
+    },
+    {
+      "key": "countries",
+      "label": "Countries where people have been charged",
+      "value": 3,
+      "display": "3",
+      "unit": null,
+      "definition": "Distinct prosecuting countries with at least one individual charged: Singapore, Taiwan, United States. Countries with seizures but no charges are not counted.",
+      "source": "defendants.csv"
+    },
+    {
+      "key": "guilty-pleas",
+      "label": "Guilty pleas",
+      "value": 8,
+      "display": "8",
+      "unit": null,
+      "definition": "Individuals whose recorded plea is guilty. Each plea links to its source on the case page. Company pleas, and confessions that are not formal guilty pleas, are not counted.",
+      "source": "defendants.csv"
+    },
+    {
+      "key": "sentences",
+      "label": "Sentences confirmed in public sources",
+      "value": 3,
+      "display": "3",
+      "unit": null,
+      "definition": "Individuals whose status is \"Sentenced\". A sentence counts only once it is confirmed by a court record or official release. Zero can mean a sentencing has not been reported, not that none has happened.",
+      "source": "defendants.csv"
+    },
+    {
+      "key": "reached-china",
+      "label": "Value alleged by authorities to have reached China",
+      "value": 881200000,
+      "display": "$881.2 million",
+      "unit": null,
+      "definition": "Sum of the dollar value that prosecutors or other authorities say actually reached China, across the 4 cases where they state one (CS-003, CS-004, CS-006, CS-007). These are allegations, not proven amounts. Order values, wire transfers and seizures are never added in.",
+      "source": "cases.csv"
+    },
+    {
+      "key": "months-to-action",
+      "label": "Average months from start of alleged scheme to first official action",
+      "value": 25.6,
+      "display": "25.6",
+      "unit": "months",
+      "definition": "Unweighted average, across the 8 cases with both dates, of the time from the approximate start of the alleged conduct to the first public official action (arrest, charge or indictment). Start dates are approximate to the month. Seizures without a scheme start date are excluded.",
+      "source": "cases.csv"
+    }
+  ]
+}
